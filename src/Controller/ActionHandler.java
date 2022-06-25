@@ -12,6 +12,7 @@ import Model.LineTable;
 import View.CreateNewInvoiceDialog;
 import View.CreateNewLineDialog;
 import View.SalesFrame;
+import java.awt.HeadlessException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -20,9 +21,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
@@ -136,19 +141,26 @@ public class ActionHandler implements ActionListener, ListSelectionListener {
                 
                for(int i =0; i<headerList.size(); i++)
                {
-                   String[] headerSplits;
-                   headerSplits = headerList.get(i).split(",");
-                   
-                   int invoiceNumber;
-                   invoiceNumber =Integer.parseInt(headerSplits[0]); //function to transform string to int
-                   String invoiceDate;
-                   invoiceDate = headerSplits[1];
-                   String customerName;
-                   customerName = headerSplits[2];
-                   
-                   InvoiceHeader invoice; 
-                   invoice = new InvoiceHeader(invoiceNumber, invoiceDate,customerName);
-                   invoicesList.add(invoice); 
+                   try
+                   {
+                       String[] headerSplits;
+                       headerSplits = headerList.get(i).split(",");
+
+                       int invoiceNumber;
+                       invoiceNumber =Integer.parseInt(headerSplits[0]); //function to transform string to int
+                       String invoiceDate;
+                       invoiceDate = headerSplits[1];
+                       String customerName;
+                       customerName = headerSplits[2];
+
+                       InvoiceHeader invoice; 
+                       invoice = new InvoiceHeader(invoiceNumber, invoiceDate,customerName);
+                       invoicesList.add(invoice); 
+                   }
+                   catch (Exception e)
+                   {
+                       JOptionPane.showMessageDialog(frame, "Worng file format", "Error", JOptionPane.ERROR_MESSAGE);
+                   }
                }
                
             choose = fileChooser.showOpenDialog(frame);
@@ -164,33 +176,40 @@ public class ActionHandler implements ActionListener, ListSelectionListener {
                 
                 for(int i = 0; i<lineList.size(); i++)
                 {
-                    String [] lineSplits;
-                    lineSplits = lineList.get(i).split(",");
-                    
-                    int invoiceNumber;
-                    invoiceNumber =Integer.parseInt(lineSplits[0]);
-                    String itemName;
-                    itemName = lineSplits[1];
-                    double itemCost;
-                    itemCost = Double.parseDouble(lineSplits[2]); //function to transform string to double
-                    int itemCount;
-                    itemCount = Integer.parseInt(lineSplits[3]); //function to transfrom string to int
-                    
-                    
-                    InvoiceHeader matchFound = new InvoiceHeader();
-                    for (InvoiceHeader invoicesList1 : invoicesList) {
-                        
-                        if (invoicesList1.getInvoiceNumber() == invoiceNumber)
-                        {
-                            matchFound = invoicesList1;
-                            break;
+                    try
+                    {
+                        String [] lineSplits;
+                        lineSplits = lineList.get(i).split(",");
+
+                        int invoiceNumber;
+                        invoiceNumber =Integer.parseInt(lineSplits[0]);
+                        String itemName;
+                        itemName = lineSplits[1];
+                        double itemCost;
+                        itemCost = Double.parseDouble(lineSplits[2]); //function to transform string to double
+                        int itemCount;
+                        itemCount = Integer.parseInt(lineSplits[3]); //function to transfrom string to int
+
+
+                        InvoiceHeader matchFound = new InvoiceHeader();
+                        for (InvoiceHeader invoicesList1 : invoicesList) {
+
+                            if (invoicesList1.getInvoiceNumber() == invoiceNumber)
+                            {
+                                matchFound = invoicesList1;
+                                break;
+                            }
                         }
+
+
+                        InvoiceLine invoiceLine;
+                        invoiceLine = new InvoiceLine(matchFound, itemCount, itemCost, itemName);
+                        matchFound.getLines().add(invoiceLine);
                     }
-                    
-                    
-                    InvoiceLine invoiceLine;
-                    invoiceLine = new InvoiceLine(matchFound, itemCount, itemCost, itemName);
-                    matchFound.getLines().add(invoiceLine);
+                    catch (Exception e)
+                    {
+                        JOptionPane.showMessageDialog(frame, "Worng file format", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             }
             
@@ -203,6 +222,7 @@ public class ActionHandler implements ActionListener, ListSelectionListener {
             }
         }
         catch (IOException e){
+            JOptionPane.showMessageDialog(frame, "Worng file format", "Error", JOptionPane.ERROR_MESSAGE);
         }
                    
         
@@ -256,7 +276,7 @@ public class ActionHandler implements ActionListener, ListSelectionListener {
         }
         catch (Exception e)
         {
-            
+             JOptionPane.showMessageDialog(frame, "Worng file format", "Error", JOptionPane.ERROR_MESSAGE);
         }
         
     
@@ -298,13 +318,38 @@ public class ActionHandler implements ActionListener, ListSelectionListener {
         String date = invDialog.getDateField().getText();
         String customerName = invDialog.getCustomerNameField().getText();
         int number = frame.getNextCreationNumber();
-        
-        InvoiceHeader newInvoice = new InvoiceHeader(number, date, customerName);
-        frame.getAllInvoices().add(newInvoice);
-        frame.getHeaderTableModel().fireTableDataChanged();
-        invDialog.setVisible(false);
-        invDialog.dispose();
-        invDialog = null;
+        try
+        {
+            String [] dateSections = date.split("-");
+            if (dateSections.length < 3)
+            {
+                JOptionPane.showMessageDialog(frame, "Wrong date format", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            else
+            {
+                int day = Integer.parseInt(dateSections[0]);
+                int month = Integer.parseInt(dateSections[1]);
+                int year = Integer.parseInt(dateSections[2]);
+                
+                if (day >31 || month > 12)
+                {
+                    JOptionPane.showMessageDialog(frame, "Wrong date format", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                else
+                {
+                    InvoiceHeader newInvoice = new InvoiceHeader(number, date, customerName);
+                    frame.getAllInvoices().add(newInvoice);
+                    frame.getHeaderTableModel().fireTableDataChanged();
+                    invDialog.setVisible(false);
+                    invDialog.dispose();
+                    invDialog = null;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            JOptionPane.showMessageDialog(frame, "Wrong date format", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void cancelInvoiceCreating() {
